@@ -1,0 +1,290 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Log Management Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Open Sans', sans-serif;
+        }
+        
+        body {
+            background: #d8f3d8;    /* light green */
+            color: #000;           /* black text */
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        .stat-card {
+            background: #fcd6e3;  /* light pink */
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #f7b7cd;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 2.4em;
+            font-weight: bold;
+        }
+
+        /* MAIN GRID */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        .panel {
+            background: #fcd6e3; /* light pink */
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #f7b7cd;
+        }
+
+        .panel h2 {
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        /* EVENTS */
+        .event {
+            background: #ffd6e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 5px solid #7bb661;
+        }
+
+        .event.anomaly {
+            border-left-color: #e80000;
+            background: #ffc4c4;
+        }
+
+        .time {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+
+        .device {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* DEVICES */
+        .device-item {
+            background: #ffd6e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .device-item .device-id {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .trust-bar {
+            background: #ffe6ef;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .trust-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            transition: width 0.3s ease;
+            color: white;
+        }
+
+        .trust-high {
+            background: #4CAF50;
+        }
+
+        .trust-medium {
+            background: #FF9800;
+        }
+
+        .trust-low {
+            background: #f44336;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            font-size: 0.8em;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 8px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-healthy {
+            background: #4CAF50;
+        }
+
+        .status-warning {
+            background: #FF9800;
+        }
+
+        .status-critical {
+            background: #f44336;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Blockchain Log Management System</h1>
+            <p>Real-time Network Forensics with ML Anomaly Detection</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Logs</h3>
+                <div class="value" id="total-logs">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Anomalies Detected</h3>
+                <div class="value" id="total-anomalies">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Blockchain Blocks</h3>
+                <div class="value" id="blockchain-blocks">0</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="panel">
+                <h2>📊 Recent Events</h2>
+                <div id="events-container"></div>
+            </div>
+
+            <div class="panel">
+                <h2>🛡️ IoT Device Trust Scores</h2>
+                <div id="devices-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateDashboard() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-logs').textContent = data.total_logs;
+                    document.getElementById('total-anomalies').textContent = data.total_anomalies;
+                    document.getElementById('blockchain-blocks').textContent = data.blockchain_blocks;
+
+                    const devicesContainer = document.getElementById('devices-container');
+                    devicesContainer.innerHTML = '';
+
+                    for (const [deviceId, deviceData] of Object.entries(data.devices)) {
+                        const score = deviceData.trust_score;
+
+                        let trustClass = 'trust-high';
+                        let statusClass = 'status-healthy';
+
+                        if (score < 30) {
+                            trustClass = 'trust-low';
+                            statusClass = 'status-critical';
+                        } else if (score < 60) {
+                            trustClass = 'trust-medium';
+                            statusClass = 'status-warning';
+                        }
+
+                        devicesContainer.innerHTML += `
+                            <div class="device-item">
+                                <div class="device-id">${deviceId}</div>
+                                <div class="trust-bar">
+                                    <div class="trust-fill ${trustClass}" style="width: ${score}%">${score}</div>
+                                </div>
+                                <span class="status-badge ${statusClass}">${deviceData.status}</span>
+                            </div>
+                        `;
+                    }
+                });
+
+            fetch('/api/events')
+                .then(response => response.json())
+                .then(data => {
+                    const eventsContainer = document.getElementById('events-container');
+                    eventsContainer.innerHTML = '';
+
+                    data.events.forEach(event => {
+                        const anomalyClass = event.is_anomaly ? 'anomaly' : '';
+
+                        eventsContainer.innerHTML += `
+                            <div class="event ${anomalyClass}" style="${event.is_anomaly ? '' : 'background:#c8f7c5; border-left-color:#3fa63f;'}">
+                                <div class="time">${event.timestamp}</div>
+                                <div class="device">${event.device_id}</div>
+                                <div class="status">
+                                    ${event.is_anomaly ? '⚠️ ' + event.anomaly_type : '✅ Normal Operation'}
+                                    | Trust: ${event.trust_score}
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+        }
+
+        updateDashboard();
+        setInterval(updateDashboard, 2000);
+    </script>
+
+</body>
+</html>
